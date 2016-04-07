@@ -38,7 +38,7 @@
     <target name="usage">
         <echo message=""/>
         <echo message="${name} build file"/>
-        <echo message="-----------------------------------"/>
+        <echo message="_________________________________"/>
         <echo message=""/>
         <echo message="Available targets are:"/>
         <echo message=""/>
