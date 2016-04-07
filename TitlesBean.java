@@ -1,6 +1,5 @@
 // TitlesBean.java
 // Class TitlesBean makes a database connection and retrieves
-// the books from the database.
 package org.me.webapps.bookstore;
 
 // Java core packages
@@ -90,7 +89,7 @@ public class TitlesBean implements Serializable {
 		return path;
 	}
 
-	// close statements and terminate database connection
+	
 	protected void finalize() {
 		// attempt to close database connection
 		try {
