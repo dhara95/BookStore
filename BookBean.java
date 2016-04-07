@@ -2,7 +2,6 @@
 // A BookBean object contains the data for one book.
 package org.me.webapps.bookstore;
 
-// Java core packages
 import java.io.*;
 
 public class BookBean implements Serializable {
