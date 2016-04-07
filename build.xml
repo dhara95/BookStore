@@ -1,0 +1,306 @@
+<?xml version="1.0"?>
+
+<project name="Bookstore" basedir="." default="usage">
+    <property file="build.properties"/>
+
+    <property name="src.dir" value="src"/>
+    <property name="web.dir" value="war"/>
+    <property name="build.dir" value="${web.dir}/WEB-INF/classes"/>
+    <property name="name" value="Bookstore"/>
+	<property name="browser" location="C:/Program Files/Internet Explorer/iexplore.exe"/>
+	<property name="webappurl" location="http://localhost:8080/${name}"/>
+
+    <path id="master-classpath">
+        <fileset dir="${web.dir}/WEB-INF/lib">
+            <include name="*.jar"/>
+        </fileset>
+        <!-- We need the servlet API classes: -->
+        <!--  * for Tomcat 5/6 use servlet-api.jar -->
+        <!--  * for other app servers - check the docs -->
+        <fileset dir="${appserver.lib}">
+            <include name="servlet*.jar"/>
+        </fileset>
+        <pathelement path="${build.dir}"/>
+    </path>
+	
+	<path id="hsqldb.lib.path">
+	      <fileset dir="${hsqldb.lib}">
+	        <include name="hsqldb.jar"/>
+	      </fileset>
+	</path>
+	
+	<path id="servlet.lib.path">
+		  <fileset dir="${appserver.comlib}">
+		    <include name="servlet-api.jar"/>
+		  </fileset>
+	</path>
+
+    <target name="usage">
+        <echo message=""/>
+        <echo message="${name} build file"/>
+        <echo message="-----------------------------------"/>
+        <echo message=""/>
+        <echo message="Available targets are:"/>
+        <echo message=""/>
+        <echo message="build     --> Build the application"/>
+        <echo message="deploy    --> Deploy application as directory"/>
+        <echo message="deploywar --> Deploy application as a WAR file"/>
+        <echo message="install   --> Install application in Tomcat"/>
+        <echo message="reload    --> Reload application in Tomcat"/>
+        <echo message="start     --> Start Tomcat application"/>
+        <echo message="stop      --> Stop Tomcat application"/>
+        <echo message="list      --> List Tomcat applications"/>
+        <echo message=""/>
+    </target>
+
+    <target name="build" description="Compile main source tree java files">
+        <mkdir dir="${build.dir}"/>
+        <javac destdir="${build.dir}" source="1.5" target="1.5" debug="true"
+               deprecation="false" optimize="false" failonerror="true">
+            <src path="${src.dir}"/>
+            <classpath refid="servlet.lib.path"/>
+        </javac>
+    </target>
+
+    <target name="deploy" depends="build" description="Deploy application">
+        <copy todir="${deploy.path}/${name}" preservelastmodified="true">
+            <fileset dir="${web.dir}">
+                <include name="**/*.*"/>
+            </fileset>
+        </copy>
+    	<copy todir="${deploy.path}/${name}/WEB-INF/lib" preservelastmodified="true">
+    		<fileset dir="${hsqldb.lib}">
+    			<include name="hsqldb.jar"/>
+    		</fileset>
+    	</copy>
+    </target>
+	
+	<target name="copyhsqldblib" description="Copy HSQLDB JAR file temporarily into war">
+	    <copy todir="${web.dir}/WEB-INF/lib" preservelastmodified="true">
+	        <fileset dir="${hsqldb.lib}">
+	          <include name="hsqldb.jar"/>
+	        </fileset>
+	    </copy>
+	</target>
+
+    <target name="deploywar" depends="build,copyhsqldblib" description="Deploy application as a WAR file">
+        <war destfile="${name}.war"
+             webxml="${web.dir}/WEB-INF/web.xml">
+            <fileset dir="${web.dir}">
+                <include name="**/*.*"/>
+            </fileset>
+        </war>
+        <copy todir="${deploy.path}" preservelastmodified="true">
+            <fileset dir=".">
+                <include name="*.war"/>
+            </fileset>
+        </copy>
+    	<delete file="${web.dir}/WEB-INF/lib/hsqldb.jar"/>
+    </target>
+	
+	<target name="dbserver" description="Runs HSQLDB database server">
+	      <java classname="org.hsqldb.Server"
+	            fork="yes">
+	         <classpath refid="hsqldb.lib.path"/>
+	         <arg value="-database.0"/>
+	      	 <arg value="${hsqldb.dbfile}"/>
+	      	 <arg value="-dbname.0"/>
+	      	 <arg value="${hsqldb.dbalias}"/>
+	      </java>
+	</target>
+
+
+    <target name="createTables">
+        <echo message="CREATE TABLES USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue"
+             src="db/create_table.sql">  
+            <classpath refid="hsqldb.lib.path"/>
+        </sql> 
+    </target>
+
+    <target name="dropTables">
+        <echo message="DROP TABLES USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue">  
+            <classpath refid="hsqldb.lib.path"/>
+
+        DROP TABLE publishers;
+        DROP TABLE authors;
+        DROP TABLE titles;
+        DROP TABLE authorISBN;
+
+        </sql> 
+    </target>
+
+    <target name="loadData">
+        <echo message="LOAD DATA USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue"
+             src="db/load_data.sql">  
+            <classpath refid="hsqldb.lib.path"/>
+        </sql> 
+    </target>
+
+    <target name="printData">
+        <echo message="PRINT DATA USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue"
+             print="true">  
+            <classpath refid="hsqldb.lib.path"/>
+        
+        SELECT * FROM publishers;
+        SELECT * FROM authors;
+        SELECT * FROM titles;
+        SELECT * FROM authorISBN;
+
+        </sql> 
+    </target>
+
+    <target name="clearData">
+        <echo message="CLEAR DATA USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue">  
+            <classpath refid="hsqldb.lib.path"/>
+        
+        DELETE FROM publishers;
+        DELETE FROM authors;
+        DELETE FROM titles;
+        DELETE FROM authorISBN;
+
+        </sql> 
+    </target>
+
+    <target name="shutdownDb">
+        <echo message="SHUT DOWN DATABASE USING: ${db.driver} ${db.url}"/>
+        <sql driver="${db.driver}"
+             url="${db.url}"
+             userid="${db.user}"
+             password="${db.pw}"
+             onerror="continue">  
+            <classpath refid="hsqldb.lib.path"/>
+
+        SHUTDOWN;
+
+        </sql> 
+    </target>
+    
+    <target name="deleteDb">
+        <delete>
+           <fileset dir="db" includes="${db.name}.*"/>
+        </delete>
+    </target>
+    
+    <target name="setupDb" depends="createTables,loadData">
+    </target>
+
+    
+<!-- ============================================================== -->
+<!-- Tomcat tasks - remove these if you don't have Tomcat installed -->
+<!-- ============================================================== -->
+
+    <path id="catalina-ant-classpath">
+        <!-- We need the Catalina jars for Tomcat -->
+        <!--  * for other app servers - check the docs -->
+        <fileset dir="${appserver.lib}">
+            <include name="catalina-ant.jar"/>
+        </fileset>
+    </path>
+
+    <taskdef name="install" classname="org.apache.catalina.ant.InstallTask">
+        <classpath refid="catalina-ant-classpath"/>
+    </taskdef>
+    <taskdef name="reload" classname="org.apache.catalina.ant.ReloadTask">
+        <classpath refid="catalina-ant-classpath"/>
+    </taskdef>
+    <taskdef name="list" classname="org.apache.catalina.ant.ListTask">
+        <classpath refid="catalina-ant-classpath"/>
+    </taskdef>
+    <taskdef name="start" classname="org.apache.catalina.ant.StartTask">
+        <classpath refid="catalina-ant-classpath"/>
+    </taskdef>
+    <taskdef name="stop" classname="org.apache.catalina.ant.StopTask">
+        <classpath refid="catalina-ant-classpath"/>
+    </taskdef>
+	
+	<target name="startTomcat">
+	  <exec executable="cmd">
+	    <arg value="/c"/>
+	    <arg value="${appserver.bin}/startup.bat"/>
+	  </exec>
+	</target>
+
+	<target name="stopTomcat">
+	  <exec executable="cmd">
+	    <arg value="/c"/>
+	    <arg value="${appserver.bin}/shutdown.bat"/>
+	  </exec>
+	</target>
+
+    <target name="install" description="Install application in Tomcat">
+        <install url="${tomcat.manager.url}"
+                 username="${tomcat.manager.username}"
+                 password="${tomcat.manager.password}"
+                 path="/${name}"
+                 war="${name}"/>
+    </target>
+
+    <target name="reload" description="Reload application in Tomcat">
+        <reload url="${tomcat.manager.url}"
+                 username="${tomcat.manager.username}"
+                 password="${tomcat.manager.password}"
+                 path="/${name}"/>
+    </target>
+
+    <target name="start" description="Start Tomcat application">
+        <start url="${tomcat.manager.url}"
+                 username="${tomcat.manager.username}"
+                 password="${tomcat.manager.password}"
+                 path="/${name}"/>
+    </target>
+
+    <target name="stop" description="Stop Tomcat application">
+        <stop url="${tomcat.manager.url}"
+                 username="${tomcat.manager.username}"
+                 password="${tomcat.manager.password}"
+                 path="/${name}"/>
+    </target>
+
+    <target name="list" description="List Tomcat applications">
+        <list url="${tomcat.manager.url}"
+                 username="${tomcat.manager.username}"
+                 password="${tomcat.manager.password}"/>
+    </target>
+    
+    <target name="deleteApp" depends="stop">
+       <delete dir="${deploy.path}/${name}"/>
+    </target>
+	
+	<target name="runweb" depends="deploy,install">
+		<exec executable="cmd">
+		   <arg value="/c"/>
+		   <arg value="runwebapp.bat"/>
+		</exec>
+	</target>
+	
+	<target name="runapp" depends="setupDb,runweb">
+	</target>
+
+<!-- End Tomcat tasks -->
+
+</project>
